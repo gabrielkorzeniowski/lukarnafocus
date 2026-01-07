@@ -2,7 +2,7 @@
 * {
   box-sizing: border-box;
   font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  font-weight: 300;
+  font-weight: 500;
 }
 
 strong {
@@ -32,7 +32,7 @@ body {
   right: 0;
   height: 104px;
 
-  background: linear-gradient(135deg, var(--violet-main), var(--violet-dark));
+  background: #7b5aa2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,9 +70,13 @@ main {
 }
 
 /* NAGŁÓWKI */
-h1, h2 {
-  color: var(--violet-text);
-  font-weight: 600; /* POGRUBIONE NAGŁÓWKI */
+h1 {
+  color: #36215e;
+  font-weight: 600;
+}
+
+.card h2 {
+  font-weight: 600;
 }
 
 
@@ -96,26 +100,26 @@ h1, h2 {
 /* KARTY – TYPY */
 /* GRANATOWA */
 .card.granatowy {
-  border-left-color: #1e3a8a;
-  background: #e8edfb;
+  border-left-color: #203581;
+  background: #f8f8ff;
 }
 
 /* FIOLETOWA */
 .card.fioletowy {
-  border-left-color: #6d28d9;
-  background: #f3edff;
+  border-left-color: #663399;
+  background: #f8f8ff;
 }
 
 /* CZERWONA */
 .card.czerwony {
-  border-left-color: #c62828;
-  background: #fdecea;
+  border-left-color: #b11116;
+  background: #f8f8ff;
 }
 
 /* SZARA */
 .card.szary {
-  border-left-color: #616161;
-  background: #f5f5f5;
+  border-left-color: #657681;
+  background: #f8f8ff;
 }
 
 
@@ -144,7 +148,7 @@ h1, h2 {
 /* IFRAME */
 iframe {
   width: 100%;
-  height: 70vh;
+  height: 65vh;
   border-radius: 12px;
 }
 
@@ -155,7 +159,7 @@ iframe {
   left: 12px;
   right: 12px;
 
-  background: linear-gradient(135deg, var(--violet-main), var(--violet-dark));
+  background: #7b5aa2;
   border-radius: 24px;
 
   display: flex;
@@ -233,4 +237,50 @@ iframe {
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+.cones-wrapper {
+  position: relative;
+  max-width: 900px;
+  margin: 30px auto;
+}
+
+.cones-wrapper img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* wspólne */
+.cone-score {
+  position: absolute;
+  font-weight: 800;
+  font-size: clamp(14px, 2.5vw, 28px); /* MNIEJSZE */
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* POZYCJE – ŚRODKI SZYSZEK */
+.s1 { top: 60%; left: 13%; }
+.s2 { top: 60%; left: 31.5%; }
+.s3 { top: 60%; left: 50%; }
+.s4 { top: 60%; left: 68.5%; }
+.s5 { top: 60%; left: 87%; }
+
+.card.granatowy h2 {
+  color: #203581;
+}
+
+.card.fioletowy h2 {
+  color: #663399;
+}
+
+.card.czerwony h2 {
+  color: #b11116;
+}
+
+.card.szary h2 {
+  color: #657681;
 }
