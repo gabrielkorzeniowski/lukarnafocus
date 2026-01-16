@@ -30,7 +30,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 86px;
+  height: 64px;
 
   background: #7b5aa2;
   display: flex;
@@ -284,4 +284,5 @@ iframe {
 .card.szary h2 {
   color: #657681;
 }
+
 
