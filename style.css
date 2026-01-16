@@ -30,7 +30,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 36px;
+  height: 64px;
 
   background: #7b5aa2;
   display: flex;
@@ -55,7 +55,7 @@ body {
 /* GŁÓWNA ZAWARTOŚĆ */
 main {
   padding: 16px;
-  padding-top: 90px;   /* header */
+  padding-top: 75px;   /* header */
   padding-bottom: 140px; /* miejsce nad dolnym menu */
   max-width: 480px;
   margin: auto;
@@ -284,6 +284,7 @@ iframe {
 .card.szary h2 {
   color: #657681;
 }
+
 
 
 
