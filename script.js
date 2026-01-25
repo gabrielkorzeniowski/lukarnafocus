@@ -21,3 +21,16 @@ function showPage(pageId) {
 document.addEventListener('DOMContentLoaded', () => {
   showPage('announcements'); // domyślnie otwiera stronę Ogłoszenia
 });
+
+// ===== WSPÓŁZAWODNICTWO – PUNKTY Z ARKUSZA =====
+const SHEET_ID = '1__HxGbJbebAaqxI255lH2IMs4fuowxyXpb59EuEkd08';
+
+fetch(`https://opensheet.elk.sh/${SHEET_ID}/Scores`)
+  .then(res => res.json())
+  .then(data => {
+    data.forEach(row => {
+      const el = document.querySelector(`.${row.id}`);
+      if (el) el.textContent = row.punkty;
+    });
+  })
+  .catch(err => console.error('Błąd ładowania punktów:', err));
