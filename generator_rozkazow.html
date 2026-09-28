@@ -178,46 +178,6 @@ button.remove {
     display: block;
 }
 
-@media print {
-    body {
-        background: white;
-        padding: 0;
-    }
-
-    .app {
-        display: block;
-    }
-
-    .controls,
-    h2 {
-        display: none !important;
-    }
-
-    .panel {
-        border: 0;
-        padding: 0;
-    }
-
-    .paper {
-        padding: 0;
-        min-height: 0;
-        font-size: 12px;
-        color: black;
-    }
-
-    .paper .main-point,
-    .paper .sub-point,
-    .paper p,
-    .paper .signature {
-        font-size: 12px;
-    }
-
-    @page {
-        size: A4;
-        margin: 15mm;
-    }
-}
-
 @media (max-width: 800px) {
     body {
         padding: 10px;
@@ -229,6 +189,56 @@ button.remove {
 
     .paper {
         padding: 22px;
+    }
+}
+
+/* Ustawienia wydruku / zapisu do PDF */
+@media print {
+    @page {
+        size: A4;
+        margin: 20mm;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background: white;
+    }
+
+    .app {
+        display: block;
+        max-width: none;
+    }
+
+    .controls,
+    h2 {
+        display: none !important;
+    }
+
+    .panel {
+        border: none;
+        padding: 0;
+    }
+
+    .paper {
+        padding: 0;
+        min-height: 0;
+        width: 100%;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    .paper .main-point,
+    .paper .sub-point,
+    .paper p,
+    .paper .signature {
+        font-size: 12px;
+    }
+
+    .paper .main-point,
+    .paper .sub-point,
+    .paper p {
+        break-inside: avoid;
     }
 }
 </style>
@@ -247,6 +257,9 @@ button.remove {
     <label for="date">Data rozkazu</label>
     <input id="date" type="date">
 
+    <label for="place">Miejscowość</label>
+    <input id="place" type="text" value="Gliwice" placeholder="Wpisz miejscowość">
+
     <p class="muted">
         Data ustawia się automatycznie na dziś. Możesz ją zmienić.
         Rok numeru rozkazu pobierany jest z daty.
@@ -255,10 +268,10 @@ button.remove {
     <div id="sections"></div>
 
     <button id="copy">Kopiuj rozkaz do Worda</button>
-    <button class="secondary" id="pdf">Generuj PDF</button>
-    <button class="secondary" id="reset">Resetuj formularz</button>
     <button class="secondary" id="selectAll">Zaznacz wszystkie punkty</button>
     <button class="secondary" id="clear">Wyczyść treść</button>
+    <button class="secondary" id="pdf">Generuj PDF</button>
+    <button class="secondary" id="reset">Resetuj formularz</button>
 
     <p id="status" class="muted" aria-live="polite"></p>
 </section>
@@ -287,8 +300,8 @@ const defs = [
             ["2.1", "Zmiany w składzie rady szczepu"],
             ["2.2", "Zwolnienia z funkcji"],
             ["2.3", "Zwolnienia z członkostwa w szczepie"],
-            ["2.4", "Przeniesienia"],
-            ["2.5", "Rozwiązania"]
+            ["2.4", "Przeniesienia (np. członka z jednej drużyny do drugiej)"],
+            ["2.5", "Rozwiązania (np. zespołu)"]
         ]
     },
     {
@@ -296,14 +309,16 @@ const defs = [
         title: "Mianowania",
         subs: [
             ["3.1", "Powołanie w skład rady szczepu"],
-            ["3.2", "Mianowania funkcyjnych/kadry szczepu"]
+            ["3.2", "Powołania"],
+            ["3.3", "Mianowania funkcyjnych/kadry szczepu"]
         ]
     },
     {
         n: 4,
         title: "Zatwierdzenia",
         subs: [
-            ["4.1", "Zatwierdzenie składu rady szczepu"]
+            ["4.1", "Zatwierdzenie składu rady szczepu"],
+            ["4.2", "Zatwierdzenie składu zespołów"]
         ]
     },
     {
@@ -465,10 +480,11 @@ function esc(s) {
 
 function render() {
     const { day, month, year } = dateParts();
+    const place = $("place").value.trim() || "…";
 
     let out = `
         <div class="place">
-            Gliwice, ${day}.${month}.${year} r.
+            ${esc(place)}, ${day}.${month}.${year} r.
         </div>
 
         <div class="masthead">
@@ -559,24 +575,13 @@ function render() {
 
 $("date").addEventListener("change", render);
 $("number").addEventListener("input", render);
+$("place").addEventListener("input", render);
 
 $("selectAll").onclick = () => {
     document.querySelectorAll('#sections input[type="checkbox"]')
         .forEach(x => x.checked = true);
 
     render();
-};
-
-// Resetuje wszystkie pola, przywracając wartości początkowe.
-$("reset").onclick = () => {
-    if (confirm("Czy na pewno chcesz zresetować cały formularz?")) {
-        location.reload();
-    }
-};
-
-// Otwiera okno drukowania, z którego można zapisać rozkaz jako PDF.
-$("pdf").onclick = () => {
-    window.print();
 };
 
 $("clear").onclick = () => {
@@ -626,6 +631,16 @@ $("copy").onclick = async () => {
     } catch (e) {
         $("status").textContent =
             "Nie udało się skopiować automatycznie. Zaznacz tekst podglądu i skopiuj ręcznie.";
+    }
+};
+
+$("pdf").onclick = () => {
+    window.print();
+};
+
+$("reset").onclick = () => {
+    if (confirm("Czy na pewno zresetować formularz? Wszystkie wpisane dane zostaną usunięte.")) {
+        location.reload();
     }
 };
 
