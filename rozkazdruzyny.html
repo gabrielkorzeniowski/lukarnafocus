@@ -1,1 +1,583 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generator rozkazów szczepowych – Twierdza</title>
 
+<style>
+:root {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #222;
+    background: #f4f5f6;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 24px;
+}
+
+.app {
+    max-width: 1200px;
+    margin: auto;
+    display: grid;
+    grid-template-columns: minmax(300px, 1fr) minmax(320px, 1.1fr);
+    gap: 22px;
+}
+
+.panel {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 20px;
+}
+
+h1 {
+    font-size: 22px;
+    margin: 0 0 18px;
+}
+
+h2 {
+    font-size: 17px;
+    margin: 0 0 14px;
+}
+
+label {
+    display: block;
+    font-size: 13px;
+    margin: 10px 0 5px;
+}
+
+input[type="text"],
+input[type="date"],
+textarea {
+    width: 100%;
+    padding: 9px;
+    border: 1px solid #bbb;
+    font: inherit;
+    background: white;
+}
+
+textarea {
+    min-height: 70px;
+    resize: vertical;
+}
+
+button {
+    border: 1px solid #555;
+    background: #222;
+    color: white;
+    padding: 9px 13px;
+    font: inherit;
+    cursor: pointer;
+    margin: 5px 4px 5px 0;
+}
+
+button.secondary {
+    background: white;
+    color: #222;
+}
+
+button.remove {
+    padding: 4px 8px;
+    background: white;
+    color: #922;
+    border-color: #c99;
+}
+
+.section {
+    border-top: 1px solid #ddd;
+    padding: 12px 0;
+}
+
+.sectionhead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sectionhead label {
+    margin: 0;
+    font-weight: bold;
+    flex: 1;
+}
+
+.entry {
+    border-left: 2px solid #ddd;
+    padding: 8px 0 8px 12px;
+    margin: 8px 0;
+}
+
+.muted {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Podgląd i dokument do Worda */
+.paper {
+    font-family: "Times New Roman", serif;
+    background: white;
+    color: black;
+    padding: 34px 38px;
+    min-height: 700px;
+    line-height: 1.35;
+    font-size: 12px;
+    white-space: normal;
+}
+
+.paper .place {
+    text-align: right;
+    margin-bottom: 16px;
+}
+
+.paper .masthead {
+    text-align: left;
+}
+
+.paper .title {
+    text-align: center;
+    font-weight: bold;
+    margin: 18px 0;
+}
+
+.paper .greeting {
+    margin: 18px 0;
+}
+
+.paper .main-point {
+    font-size: 12px;
+    margin: 12px 0 5px;
+    font-weight: normal;
+}
+
+.paper .sub-point {
+    font-size: 12px;
+    margin: 8px 0 4px 24px;
+    font-weight: normal;
+}
+
+.paper p {
+    font-size: 12px;
+    margin: 4px 0;
+}
+
+.paper p.entry-sub {
+    margin-left: 48px;
+}
+
+.paper .signature {
+    text-align: right;
+    margin-top: 32px;
+    font-size: 12px;
+}
+
+.paper .signature strong {
+    display: block;
+}
+
+@media (max-width: 800px) {
+    body {
+        padding: 10px;
+    }
+
+    .app {
+        grid-template-columns: 1fr;
+    }
+
+    .paper {
+        padding: 22px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<section class="panel controls">
+    <h1>Generator rozkazów drużynowego</h1>
+
+    <label for="number">Numer rozkazu (bez roku)</label>
+    <input id="number" type="text" value="LX" placeholder="np. L2">
+
+    <label for="date">Data rozkazu</label>
+    <input id="date" type="date">
+
+    <p class="muted">
+        Data ustawia się automatycznie na dziś. Możesz ją zmienić.
+        Rok numeru rozkazu pobierany jest z daty.
+    </p>
+
+    <div id="sections"></div>
+
+    <button id="copy">Kopiuj rozkaz do Worda</button>
+    <button class="secondary" id="selectAll">Zaznacz wszystkie punkty</button>
+    <button class="secondary" id="clear">Wyczyść treść</button>
+
+    <p id="status" class="muted" aria-live="polite"></p>
+</section>
+
+<section class="panel">
+    <h2>Podgląd dokumentu</h2>
+    <div id="preview" class="paper"></div>
+</section>
+
+</div>
+
+<script>
+const defs = [
+    {
+        n: 1,
+        title: "Uchwały, zarządzenia, decyzje",
+        subs: [
+            ["1.1", "Uchwały Rady Drużyny"],
+            ["1.2", "Zarządzenia"]
+        ]
+    },
+    {
+        n: 2,
+        title: "Zwolnienia",
+        subs: [
+            ["2.1", "Zmiany w składzie Rady Drużyny"],
+            ["2.2", "Zwolnienia z funkcji"],
+            ["2.3", "Zwolnienia z członkostwa w drużynie"],
+            ["2.4", "Przeniesienia (np. członka z jednego zastępu do drugiego)"],
+            ["2.5", "Rozwiązania (np. zastępu)"]
+        ]
+    },
+    {
+        n: 3,
+        title: "Mianowania",
+        subs: [
+            ["3.1", "Powołanie w skład Rady Drużyny"],
+            ["3.2", "Mianowania funkcyjnych drużyny"]
+        ]
+    },
+    {
+        n: 4,
+        title: "Zatwierdzenia",
+        subs: [
+            ["4.1", "Zatwierdzenie składu Rady Drużyny"]
+        ]
+    },
+    {
+        n: 5,
+        title: "Przyznanie stopni, sprawności, uprawnień, odznak i zaliczenie zadań",
+        subs: []
+    },
+    {
+        n: 6,
+        title: "Pochwały, nagrody i wyróżnienia",
+        subs: []
+    },
+    {
+        n: 7,
+        title: "Upomnienia i kary",
+        subs: []
+    },
+    {
+        n: 8,
+        title: "Sprawy różne",
+        subs: []
+    }
+];
+
+const $ = id => document.getElementById(id);
+
+const today = new Date();
+
+$("date").value =
+    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+function dateParts() {
+    const d = $("date").value
+        ? new Date($("date").value + "T12:00:00")
+        : new Date();
+
+    return {
+        day: String(d.getDate()).padStart(2, "0"),
+        month: String(d.getMonth() + 1).padStart(2, "0"),
+        year: d.getFullYear()
+    };
+}
+
+function addEntry(container) {
+    const wrap = document.createElement("div");
+    wrap.className = "entry";
+
+    const ta = document.createElement("textarea");
+    ta.placeholder = "Wpisz treść punktu…";
+    ta.addEventListener("input", render);
+
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.className = "remove";
+    rm.textContent = "Usuń wpis";
+
+    rm.onclick = () => {
+        wrap.remove();
+        render();
+    };
+
+    wrap.append(ta, rm);
+    container.append(wrap);
+
+    render();
+}
+
+function build() {
+    const root = $("sections");
+
+    defs.forEach((d, i) => {
+        const sec = document.createElement("div");
+        sec.className = "section";
+
+        const head = document.createElement("div");
+        head.className = "sectionhead";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.id = "sec" + i;
+        cb.addEventListener("change", render);
+
+        const lab = document.createElement("label");
+        lab.htmlFor = cb.id;
+        lab.textContent = d.n + ". " + d.title;
+
+        head.append(cb, lab);
+        sec.append(head);
+
+        if (d.subs.length) {
+            d.subs.forEach((s, j) => {
+                const sub = document.createElement("div");
+                sub.className = "section";
+
+                const sh = document.createElement("div");
+                sh.className = "sectionhead";
+
+                const scb = document.createElement("input");
+                scb.type = "checkbox";
+                scb.id = `sub${i}_${j}`;
+
+                scb.addEventListener("change", () => {
+                    if (scb.checked) cb.checked = true;
+                    render();
+                });
+
+                const sl = document.createElement("label");
+                sl.htmlFor = scb.id;
+                sl.textContent = s[0] + ". " + s[1];
+
+                const add = document.createElement("button");
+                add.type = "button";
+                add.className = "secondary";
+                add.textContent = "+ wpis";
+
+                const entries = document.createElement("div");
+                entries.id = `entries${i}_${j}`;
+
+                add.onclick = () => {
+                    scb.checked = true;
+                    cb.checked = true;
+                    addEntry(entries);
+                };
+
+                sh.append(scb, sl, add);
+                sub.append(sh, entries);
+                sec.append(sub);
+            });
+        } else {
+            const add = document.createElement("button");
+            add.type = "button";
+            add.className = "secondary";
+            add.textContent = "+ wpis";
+
+            const entries = document.createElement("div");
+            entries.id = `entries${i}`;
+
+            add.onclick = () => {
+                cb.checked = true;
+                addEntry(entries);
+            };
+
+            sec.append(add, entries);
+        }
+
+        root.append(sec);
+    });
+}
+
+function esc(s) {
+    return s.replace(/[&<>"']/g, c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    }[c]));
+}
+
+function render() {
+    const { day, month, year } = dateParts();
+
+    let out = `
+        <div class="place">
+            Gliwice, ${day}.${month}.${year} r.
+        </div>
+
+        <div class="masthead">
+            ZHP, Chorągiew Śląska<br>
+            Hufiec Ziemi Gliwickiej<br>
+            Komendantka Gliwickiego<br>
+            Szczepu “Twierdza”
+        </div>
+
+        <div class="title">
+            Rozkaz ${esc($("number").value.trim() || "…")}/${year}
+        </div>
+
+        <div class="greeting">
+            Druhny i druhowie!
+        </div>
+    `;
+
+    defs.forEach((d, i) => {
+        const top = $("sec" + i);
+
+        if (!top.checked) return;
+
+        let content = "";
+
+        if (d.subs.length) {
+            d.subs.forEach((s, j) => {
+                const cb = $(`sub${i}_${j}`);
+
+                if (!cb.checked) return;
+
+                const vals = [
+                    ...$(`entries${i}_${j}`).querySelectorAll("textarea")
+                ]
+                    .map(x => x.value.trim())
+                    .filter(Boolean);
+
+                if (vals.length) {
+                    content += `
+                        <h4 class="sub-point">
+                            ${s[0]}. ${esc(s[1])}
+                        </h4>
+                    `;
+
+                    content += vals.map((v, k) => `
+                        <p class="entry-sub">
+                            ${s[0]}.${k + 1}. ${esc(v).replace(/\n/g, "<br>")}
+                        </p>
+                    `).join("");
+                }
+            });
+        } else {
+            const vals = [
+                ...$(`entries${i}`).querySelectorAll("textarea")
+            ]
+                .map(x => x.value.trim())
+                .filter(Boolean);
+
+            if (vals.length) {
+                content = vals.map((v, k) => `
+                    <p class="entry-sub">
+                        ${d.n}.${k + 1}. ${esc(v).replace(/\n/g, "<br>")}
+                    </p>
+                `).join("");
+            }
+        }
+
+        if (content) {
+            out += `
+                <h4 class="main-point">
+                    ${d.n}. ${esc(d.title)}
+                </h4>
+                ${content}
+            `;
+        }
+    });
+
+    out += `
+        <div class="signature">
+            Czuwaj!<br><br>
+            <strong>(-) pwd. Gabriel Korzeniowski HO</strong>
+            Drużynowy 9 GDHS Lukarna im. rot. Witolda Pileckiego
+        </div>
+    `;
+
+    $("preview").innerHTML = out;
+}
+
+$("date").addEventListener("change", render);
+$("number").addEventListener("input", render);
+
+$("selectAll").onclick = () => {
+    document.querySelectorAll('#sections input[type="checkbox"]')
+        .forEach(x => x.checked = true);
+
+    render();
+};
+
+$("clear").onclick = () => {
+    document.querySelectorAll('#sections input[type="checkbox"]')
+        .forEach(x => x.checked = false);
+
+    document.querySelectorAll("#sections textarea")
+        .forEach(x => x.value = "");
+
+    render();
+
+    $("status").textContent = "Wyczyszczono treść.";
+};
+
+$("copy").onclick = async () => {
+    const node = $("preview");
+
+    try {
+        const html = node.innerHTML;
+
+        if (navigator.clipboard && window.ClipboardItem) {
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    "text/html": new Blob([html], {
+                        type: "text/html"
+                    }),
+                    "text/plain": new Blob([node.innerText], {
+                        type: "text/plain"
+                    })
+                })
+            ]);
+        } else {
+            const range = document.createRange();
+            range.selectNodeContents(node);
+
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+
+            document.execCommand("copy");
+            sel.removeAllRanges();
+        }
+
+        $("status").textContent =
+            "Skopiowano. Wklej do Worda skrótem Ctrl+V lub Cmd+V.";
+
+    } catch (e) {
+        $("status").textContent =
+            "Nie udało się skopiować automatycznie. Zaznacz tekst podglądu i skopiuj ręcznie.";
+    }
+};
+
+build();
+render();
+</script>
+
+</body>
+</html>
