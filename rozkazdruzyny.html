@@ -253,15 +253,16 @@ const defs = [
         n: 3,
         title: "Mianowania",
         subs: [
-            ["3.1", "Powołanie w skład Rady Drużyny"],
-            ["3.2", "Mianowania funkcyjnych drużyny"]
+            ["3.1", "Mianowania funkcyjnych drużyny"],
+            ["3.2", "Powołanie w skład Rady Drużyny"]
         ]
     },
     {
         n: 4,
         title: "Zatwierdzenia",
         subs: [
-            ["4.1", "Zatwierdzenie składu Rady Drużyny"]
+            ["4.1", "Zatwierdzenia składu Rady Drużyny"],
+            ["4.2", "Zatwierdzenie składu Rady Drużyny"]
         ]
     },
     {
@@ -288,10 +289,16 @@ const defs = [
 
 const $ = id => document.getElementById(id);
 
-const today = new Date();
+const STORAGE_KEY = "twierdza_rozkaz_generator_v1";
 
-$("date").value =
-    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+function getToday() {
+    const today = new Date();
+
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+}
+
+// Domyślna data przy pierwszym uruchomieniu.
+$("date").value = getToday();
 
 function dateParts() {
     const d = $("date").value
@@ -305,13 +312,119 @@ function dateParts() {
     };
 }
 
+/* =========================================
+   ZAPIS I ODTWARZANIE DANYCH
+   ========================================= */
+
+function saveState() {
+    const state = {
+        number: $("number").value,
+        date: $("date").value,
+
+        // Zapamiętaj wszystkie zaznaczenia.
+        checks: [
+            ...document.querySelectorAll(
+                '#sections input[type="checkbox"]'
+            )
+        ].map(input => input.checked),
+
+        // Zachowaj treść, kolejność i liczbę wpisów
+        // osobno dla każdego punktu.
+        entries: [
+            ...document.querySelectorAll('[id^="entries"]')
+        ].map(container =>
+            [...container.querySelectorAll("textarea")]
+                .map(textarea => textarea.value)
+        )
+    };
+
+    try {
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(state)
+        );
+    } catch (error) {
+        // Generator działa również wtedy, gdy przeglądarka
+        // nie pozwala na zapis w localStorage.
+    }
+}
+
+function restoreState() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+
+        if (!saved) {
+            return;
+        }
+
+        const state = JSON.parse(saved);
+
+        // Przywróć numer rozkazu.
+        if (typeof state.number === "string") {
+            $("number").value = state.number;
+        }
+
+        // Przywróć datę.
+        if (typeof state.date === "string" && state.date) {
+            $("date").value = state.date;
+        }
+
+        // Przywróć pola tekstowe w odpowiednich punktach.
+        const containers = [
+            ...document.querySelectorAll('[id^="entries"]')
+        ];
+
+        if (Array.isArray(state.entries)) {
+            containers.forEach((container, index) => {
+                const values = Array.isArray(state.entries[index])
+                    ? state.entries[index]
+                    : [];
+
+                values.forEach(value => {
+                    addEntry(container);
+
+                    const fields =
+                        container.querySelectorAll("textarea");
+
+                    fields[fields.length - 1].value =
+                        String(value ?? "");
+                });
+            });
+        }
+
+        // Przywróć zaznaczenia dopiero po odtworzeniu pól.
+        if (Array.isArray(state.checks)) {
+            const checkboxes = [
+                ...document.querySelectorAll(
+                    '#sections input[type="checkbox"]'
+                )
+            ];
+
+            checkboxes.forEach((checkbox, index) => {
+                checkbox.checked = Boolean(state.checks[index]);
+            });
+        }
+
+    } catch (error) {
+        // Nieprawidłowy zapis nie blokuje działania generatora.
+    }
+}
+
+/* =========================================
+   DODAWANIE WPISÓW
+   ========================================= */
+
 function addEntry(container) {
     const wrap = document.createElement("div");
     wrap.className = "entry";
 
     const ta = document.createElement("textarea");
     ta.placeholder = "Wpisz treść punktu…";
-    ta.addEventListener("input", render);
+
+    ta.addEventListener("input", () => {
+        render();
+        saveState();
+    });
 
     const rm = document.createElement("button");
     rm.type = "button";
@@ -321,6 +434,7 @@ function addEntry(container) {
     rm.onclick = () => {
         wrap.remove();
         render();
+        saveState();
     };
 
     wrap.append(ta, rm);
@@ -328,6 +442,10 @@ function addEntry(container) {
 
     render();
 }
+
+/* =========================================
+   BUDOWANIE INTERFEJSU
+   ========================================= */
 
 function build() {
     const root = $("sections");
@@ -342,7 +460,11 @@ function build() {
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.id = "sec" + i;
-        cb.addEventListener("change", render);
+
+        cb.addEventListener("change", () => {
+            render();
+            saveState();
+        });
 
         const lab = document.createElement("label");
         lab.htmlFor = cb.id;
@@ -364,8 +486,12 @@ function build() {
                 scb.id = `sub${i}_${j}`;
 
                 scb.addEventListener("change", () => {
-                    if (scb.checked) cb.checked = true;
+                    if (scb.checked) {
+                        cb.checked = true;
+                    }
+
                     render();
+                    saveState();
                 });
 
                 const sl = document.createElement("label");
@@ -383,13 +509,16 @@ function build() {
                 add.onclick = () => {
                     scb.checked = true;
                     cb.checked = true;
+
                     addEntry(entries);
+                    saveState();
                 };
 
                 sh.append(scb, sl, add);
                 sub.append(sh, entries);
                 sec.append(sub);
             });
+
         } else {
             const add = document.createElement("button");
             add.type = "button";
@@ -401,7 +530,9 @@ function build() {
 
             add.onclick = () => {
                 cb.checked = true;
+
                 addEntry(entries);
+                saveState();
             };
 
             sec.append(add, entries);
@@ -410,6 +541,10 @@ function build() {
         root.append(sec);
     });
 }
+
+/* =========================================
+   GENEROWANIE PODGLĄDU
+   ========================================= */
 
 function esc(s) {
     return s.replace(/[&<>"']/g, c => ({
@@ -448,7 +583,9 @@ function render() {
     defs.forEach((d, i) => {
         const top = $("sec" + i);
 
-        if (!top.checked) return;
+        if (!top.checked) {
+            return;
+        }
 
         let content = "";
 
@@ -456,10 +593,13 @@ function render() {
             d.subs.forEach((s, j) => {
                 const cb = $(`sub${i}_${j}`);
 
-                if (!cb.checked) return;
+                if (!cb.checked) {
+                    return;
+                }
 
                 const vals = [
-                    ...$(`entries${i}_${j}`).querySelectorAll("textarea")
+                    ...$(`entries${i}_${j}`)
+                        .querySelectorAll("textarea")
                 ]
                     .map(x => x.value.trim())
                     .filter(Boolean);
@@ -478,6 +618,7 @@ function render() {
                     `).join("");
                 }
             });
+
         } else {
             const vals = [
                 ...$(`entries${i}`).querySelectorAll("textarea")
@@ -516,27 +657,76 @@ function render() {
     $("preview").innerHTML = out;
 }
 
-$("date").addEventListener("change", render);
-$("number").addEventListener("input", render);
+/* =========================================
+   ZMIANA DATY I NUMERU
+   ========================================= */
+
+$("date").addEventListener("change", () => {
+    render();
+    saveState();
+});
+
+$("number").addEventListener("input", () => {
+    render();
+    saveState();
+});
+
+/* =========================================
+   ZAZNACZANIE WSZYSTKICH PUNKTÓW
+   ========================================= */
 
 $("selectAll").onclick = () => {
-    document.querySelectorAll('#sections input[type="checkbox"]')
-        .forEach(x => x.checked = true);
+    document.querySelectorAll(
+        '#sections input[type="checkbox"]'
+    ).forEach(x => {
+        x.checked = true;
+    });
 
     render();
+    saveState();
 };
+
+/* =========================================
+   WYCZYŚĆ TREŚĆ – PEŁNY RESET
+   ========================================= */
 
 $("clear").onclick = () => {
-    document.querySelectorAll('#sections input[type="checkbox"]')
-        .forEach(x => x.checked = false);
+    // Usuń zapisane dane. Po odświeżeniu strona uruchomi
+    // się z ustawieniami domyślnymi.
+    try {
+        localStorage.removeItem(STORAGE_KEY);
+    } catch (error) {}
 
-    document.querySelectorAll("#sections textarea")
-        .forEach(x => x.value = "");
+    // Przywróć domyślny numer rozkazu.
+    $("number").value = "LX";
 
+    // Przywróć aktualną datę.
+    $("date").value = getToday();
+
+    // Odznacz wszystkie sekcje i podpunkty.
+    document.querySelectorAll(
+        '#sections input[type="checkbox"]'
+    ).forEach(x => {
+        x.checked = false;
+    });
+
+    // Usuń wszystkie dodane wpisy, również puste.
+    document.querySelectorAll(
+        "#sections .entry"
+    ).forEach(x => {
+        x.remove();
+    });
+
+    // Odśwież podgląd dokumentu.
     render();
 
-    $("status").textContent = "Wyczyszczono treść.";
+    $("status").textContent =
+        "Przywrócono ustawienia domyślne i wyczyszczono treść.";
 };
+
+/* =========================================
+   KOPIOWANIE DO WORDA
+   ========================================= */
 
 $("copy").onclick = async () => {
     const node = $("preview");
@@ -550,11 +740,13 @@ $("copy").onclick = async () => {
                     "text/html": new Blob([html], {
                         type: "text/html"
                     }),
+
                     "text/plain": new Blob([node.innerText], {
                         type: "text/plain"
                     })
                 })
             ]);
+
         } else {
             const range = document.createRange();
             range.selectNodeContents(node);
@@ -576,7 +768,16 @@ $("copy").onclick = async () => {
     }
 };
 
+/* =========================================
+   URUCHOMIENIE GENERATORA
+   ========================================= */
+
+// 1. Zbuduj wszystkie sekcje i pola formularza.
+// 2. Odtwórz dane zapisane w przeglądarce.
+// 3. Wygeneruj aktualny podgląd.
+
 build();
+restoreState();
 render();
 </script>
 
