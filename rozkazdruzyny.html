@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generator rozkazów szczepowych – Twierdza</title>
+<title>Generator rozkazów drużyny</title>
 
 <style>
 :root {
@@ -12,9 +12,7 @@
     background: #f4f5f6;
 }
 
-* {
-    box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
     margin: 0;
@@ -179,17 +177,9 @@ button.remove {
 }
 
 @media (max-width: 800px) {
-    body {
-        padding: 10px;
-    }
-
-    .app {
-        grid-template-columns: 1fr;
-    }
-
-    .paper {
-        padding: 22px;
-    }
+    body { padding: 10px; }
+    .app { grid-template-columns: 1fr; }
+    .paper { padding: 22px; }
 }
 </style>
 </head>
@@ -235,7 +225,8 @@ const defs = [
         title: "Uchwały, zarządzenia, decyzje",
         subs: [
             ["1.1", "Uchwały Rady Drużyny"],
-            ["1.2", "Zarządzenia"]
+            ["1.2", "Zarządzenia"],
+            ["1.3", "Decyzje"]
         ]
     },
     {
@@ -261,14 +252,19 @@ const defs = [
         n: 4,
         title: "Zatwierdzenia",
         subs: [
-            ["4.1", "Zatwierdzenia składu Rady Drużyny"],
+            ["4.1", "Zatwierdzenia składu zastępów"],
             ["4.2", "Zatwierdzenie składu Rady Drużyny"]
         ]
     },
     {
         n: 5,
-        title: "Przyznanie stopni, sprawności, uprawnień, odznak i zaliczenie zadań",
-        subs: []
+        title: "Przyznania",
+        subs: [
+            ["5.1", "Przyznania stopni"],
+            ["5.2", "Przyznania tropów"],
+            ["5.3", "Przyznania sprawności"],
+            ["5.4", "Przyznania wyzwań"]
+        ]
     },
     {
         n: 6,
@@ -288,16 +284,13 @@ const defs = [
 ];
 
 const $ = id => document.getElementById(id);
-
 const STORAGE_KEY = "twierdza_rozkaz_generator_v1";
 
 function getToday() {
     const today = new Date();
-
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
-// Domyślna data przy pierwszym uruchomieniu.
 $("date").value = getToday();
 
 function dateParts() {
@@ -312,24 +305,17 @@ function dateParts() {
     };
 }
 
-/* =========================================
-   ZAPIS I ODTWARZANIE DANYCH
-   ========================================= */
+/* ZAPIS I ODTWARZANIE DANYCH */
 
 function saveState() {
     const state = {
         number: $("number").value,
         date: $("date").value,
-
-        // Zapamiętaj wszystkie zaznaczenia.
         checks: [
             ...document.querySelectorAll(
                 '#sections input[type="checkbox"]'
             )
         ].map(input => input.checked),
-
-        // Zachowaj treść, kolejność i liczbę wpisów
-        // osobno dla każdego punktu.
         entries: [
             ...document.querySelectorAll('[id^="entries"]')
         ].map(container =>
@@ -339,37 +325,27 @@ function saveState() {
     };
 
     try {
-        localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(state)
-        );
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (error) {
-        // Generator działa również wtedy, gdy przeglądarka
-        // nie pozwala na zapis w localStorage.
+        // Generator nadal działa, jeśli zapis jest niedostępny.
     }
 }
 
 function restoreState() {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
-
-        if (!saved) {
-            return;
-        }
+        if (!saved) return;
 
         const state = JSON.parse(saved);
 
-        // Przywróć numer rozkazu.
         if (typeof state.number === "string") {
             $("number").value = state.number;
         }
 
-        // Przywróć datę.
         if (typeof state.date === "string" && state.date) {
             $("date").value = state.date;
         }
 
-        // Przywróć pola tekstowe w odpowiednich punktach.
         const containers = [
             ...document.querySelectorAll('[id^="entries"]')
         ];
@@ -383,16 +359,12 @@ function restoreState() {
                 values.forEach(value => {
                     addEntry(container);
 
-                    const fields =
-                        container.querySelectorAll("textarea");
-
-                    fields[fields.length - 1].value =
-                        String(value ?? "");
+                    const fields = container.querySelectorAll("textarea");
+                    fields[fields.length - 1].value = String(value ?? "");
                 });
             });
         }
 
-        // Przywróć zaznaczenia dopiero po odtworzeniu pól.
         if (Array.isArray(state.checks)) {
             const checkboxes = [
                 ...document.querySelectorAll(
@@ -404,15 +376,12 @@ function restoreState() {
                 checkbox.checked = Boolean(state.checks[index]);
             });
         }
-
     } catch (error) {
         // Nieprawidłowy zapis nie blokuje działania generatora.
     }
 }
 
-/* =========================================
-   DODAWANIE WPISÓW
-   ========================================= */
+/* DODAWANIE WPISÓW */
 
 function addEntry(container) {
     const wrap = document.createElement("div");
@@ -439,13 +408,10 @@ function addEntry(container) {
 
     wrap.append(ta, rm);
     container.append(wrap);
-
     render();
 }
 
-/* =========================================
-   BUDOWANIE INTERFEJSU
-   ========================================= */
+/* BUDOWANIE INTERFEJSU */
 
 function build() {
     const root = $("sections");
@@ -486,10 +452,7 @@ function build() {
                 scb.id = `sub${i}_${j}`;
 
                 scb.addEventListener("change", () => {
-                    if (scb.checked) {
-                        cb.checked = true;
-                    }
-
+                    if (scb.checked) cb.checked = true;
                     render();
                     saveState();
                 });
@@ -509,7 +472,6 @@ function build() {
                 add.onclick = () => {
                     scb.checked = true;
                     cb.checked = true;
-
                     addEntry(entries);
                     saveState();
                 };
@@ -518,7 +480,6 @@ function build() {
                 sub.append(sh, entries);
                 sec.append(sub);
             });
-
         } else {
             const add = document.createElement("button");
             add.type = "button";
@@ -530,7 +491,6 @@ function build() {
 
             add.onclick = () => {
                 cb.checked = true;
-
                 addEntry(entries);
                 saveState();
             };
@@ -542,9 +502,7 @@ function build() {
     });
 }
 
-/* =========================================
-   GENEROWANIE PODGLĄDU
-   ========================================= */
+/* GENEROWANIE PODGLĄDU */
 
 function esc(s) {
     return s.replace(/[&<>"']/g, c => ({
@@ -567,8 +525,8 @@ function render() {
         <div class="masthead">
             ZHP, Chorągiew Śląska<br>
             Hufiec Ziemi Gliwickiej<br>
-            Komendantka Gliwickiego<br>
-            Szczepu “Twierdza”
+            Drużynowy 9 GDHS Lukarna<br>
+            im. rot. Witolda Pileckiego
         </div>
 
         <div class="title">
@@ -582,24 +540,17 @@ function render() {
 
     defs.forEach((d, i) => {
         const top = $("sec" + i);
-
-        if (!top.checked) {
-            return;
-        }
+        if (!top.checked) return;
 
         let content = "";
 
         if (d.subs.length) {
             d.subs.forEach((s, j) => {
                 const cb = $(`sub${i}_${j}`);
-
-                if (!cb.checked) {
-                    return;
-                }
+                if (!cb.checked) return;
 
                 const vals = [
-                    ...$(`entries${i}_${j}`)
-                        .querySelectorAll("textarea")
+                    ...$(`entries${i}_${j}`).querySelectorAll("textarea")
                 ]
                     .map(x => x.value.trim())
                     .filter(Boolean);
@@ -618,7 +569,6 @@ function render() {
                     `).join("");
                 }
             });
-
         } else {
             const vals = [
                 ...$(`entries${i}`).querySelectorAll("textarea")
@@ -657,9 +607,7 @@ function render() {
     $("preview").innerHTML = out;
 }
 
-/* =========================================
-   ZMIANA DATY I NUMERU
-   ========================================= */
+/* ZMIANA DATY I NUMERU */
 
 $("date").addEventListener("change", () => {
     render();
@@ -671,9 +619,7 @@ $("number").addEventListener("input", () => {
     saveState();
 });
 
-/* =========================================
-   ZAZNACZANIE WSZYSTKICH PUNKTÓW
-   ========================================= */
+/* ZAZNACZANIE WSZYSTKICH PUNKTÓW */
 
 $("selectAll").onclick = () => {
     document.querySelectorAll(
@@ -686,47 +632,33 @@ $("selectAll").onclick = () => {
     saveState();
 };
 
-/* =========================================
-   WYCZYŚĆ TREŚĆ – PEŁNY RESET
-   ========================================= */
+/* WYCZYŚĆ TREŚĆ – PEŁNY RESET */
 
 $("clear").onclick = () => {
-    // Usuń zapisane dane. Po odświeżeniu strona uruchomi
-    // się z ustawieniami domyślnymi.
     try {
         localStorage.removeItem(STORAGE_KEY);
     } catch (error) {}
 
-    // Przywróć domyślny numer rozkazu.
     $("number").value = "LX";
-
-    // Przywróć aktualną datę.
     $("date").value = getToday();
 
-    // Odznacz wszystkie sekcje i podpunkty.
     document.querySelectorAll(
         '#sections input[type="checkbox"]'
     ).forEach(x => {
         x.checked = false;
     });
 
-    // Usuń wszystkie dodane wpisy, również puste.
-    document.querySelectorAll(
-        "#sections .entry"
-    ).forEach(x => {
+    document.querySelectorAll("#sections .entry").forEach(x => {
         x.remove();
     });
 
-    // Odśwież podgląd dokumentu.
     render();
 
     $("status").textContent =
         "Przywrócono ustawienia domyślne i wyczyszczono treść.";
 };
 
-/* =========================================
-   KOPIOWANIE DO WORDA
-   ========================================= */
+/* KOPIOWANIE DO WORDA */
 
 $("copy").onclick = async () => {
     const node = $("preview");
@@ -740,13 +672,11 @@ $("copy").onclick = async () => {
                     "text/html": new Blob([html], {
                         type: "text/html"
                     }),
-
                     "text/plain": new Blob([node.innerText], {
                         type: "text/plain"
                     })
                 })
             ]);
-
         } else {
             const range = document.createRange();
             range.selectNodeContents(node);
@@ -768,13 +698,7 @@ $("copy").onclick = async () => {
     }
 };
 
-/* =========================================
-   URUCHOMIENIE GENERATORA
-   ========================================= */
-
-// 1. Zbuduj wszystkie sekcje i pola formularza.
-// 2. Odtwórz dane zapisane w przeglądarce.
-// 3. Wygeneruj aktualny podgląd.
+/* URUCHOMIENIE GENERATORA */
 
 build();
 restoreState();
